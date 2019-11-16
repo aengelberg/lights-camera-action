@@ -1,0 +1,76 @@
+version: 2.1
+
+commands:
+  go-build:
+    parameters:
+      os:
+        description: Target operating system
+        type: enum
+        enum: ["linux", "darwin"]
+        default: "linux"
+      arch:
+        description: Target architecture
+        type: enum
+        enum: ["386", "amd64"]
+        default: "amd64"
+    steps:
+      ## method 1 to send a command span
+      ## don't use CGO so that this binary can run in alpine-linux containers
+      - run: |
+          GOOS=<< parameters.os >> \
+          GOARCH=<< parameters.arch >> \
+          CGO_ENABLED=0 \
+          go build -ldflags "-X main.Version=${CIRCLE_TAG}" \
+          -o $GOPATH/bin/gh-actions-orb-<< parameters.os >>-<< parameters.arch >>
+
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.13
+    steps:
+      - checkout
+      - go-build:
+          os: linux
+          arch: "386"
+      - go-build:
+          os: linux
+          arch: amd64
+      - go-build:
+          os: darwin
+          arch: amd64
+      - run: mkdir -v artifacts; cp -v $GOPATH/bin/gh-actions-orb-* artifacts/
+      - run: tar -cvf artifacts/gh-actions-orb.tar artifacts/gh-actions-orb-*
+      - persist_to_workspace:
+          root: artifacts
+          paths:
+            - gh-actions-orb.tar
+      - store_artifacts:
+          path: artifacts/
+  publish:
+    docker:
+      - image: cibuilds/github:0.12.1
+    steps:
+      - attach_workspace:
+          at: artifacts
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            echo "about to publish to tag ${CIRCLE_TAG}"
+            tar -xvf artifacts/gh-actions-orb.tar
+            ls -l *
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/gh-actions-orb-linux-386
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/gh-actions-orb-linux-amd64
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/gh-actions-orb-darwin-amd64
+
+workflows:
+  test:
+    jobs:
+      - build
+      - publish:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
