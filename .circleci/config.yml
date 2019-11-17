@@ -65,7 +65,10 @@ jobs:
 workflows:
   test:
     jobs:
-      - build
+      - build:
+          filters:
+            tags:
+              only: /.*/
       - publish:
           requires:
             - build
