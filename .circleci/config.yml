@@ -14,14 +14,13 @@ commands:
         enum: ["386", "amd64"]
         default: "amd64"
     steps:
-      ## method 1 to send a command span
       ## don't use CGO so that this binary can run in alpine-linux containers
       - run: |
           GOOS=<< parameters.os >> \
           GOARCH=<< parameters.arch >> \
           CGO_ENABLED=0 \
           go build -ldflags "-X main.Version=${CIRCLE_TAG}" \
-          -o $GOPATH/bin/gh-actions-orb-<< parameters.os >>-<< parameters.arch >>
+          -o $GOPATH/bin/lights-camera-action-<< parameters.os >>-<< parameters.arch >>
 
 jobs:
   build:
@@ -38,12 +37,12 @@ jobs:
       - go-build:
           os: darwin
           arch: amd64
-      - run: mkdir -v artifacts; cp -v $GOPATH/bin/gh-actions-orb-* artifacts/
-      - run: tar -cvf artifacts/gh-actions-orb.tar artifacts/gh-actions-orb-*
+      - run: mkdir -v artifacts; cp -v $GOPATH/bin/lights-camera-action-* artifacts/
+      - run: tar -cvf artifacts/lights-camera-action.tar artifacts/lights-camera-action-*
       - persist_to_workspace:
           root: artifacts
           paths:
-            - gh-actions-orb.tar
+            - lights-camera-action.tar
       - store_artifacts:
           path: artifacts/
   publish:
@@ -56,11 +55,11 @@ jobs:
           name: "Publish Release on GitHub"
           command: |
             echo "about to publish to tag ${CIRCLE_TAG}"
-            tar -xvf artifacts/gh-actions-orb.tar
+            tar -xvf artifacts/lights-camera-action.tar
             ls -l *
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/gh-actions-orb-linux-386
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/gh-actions-orb-linux-amd64
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/gh-actions-orb-darwin-amd64
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/lights-camera-action-linux-386
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/lights-camera-action-linux-amd64
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/lights-camera-action-darwin-amd64
 
 workflows:
   test:
