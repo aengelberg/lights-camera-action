@@ -15,12 +15,14 @@ commands:
         default: "amd64"
     steps:
       ## don't use CGO so that this binary can run in alpine-linux containers
-      - run: |
-          GOOS=<< parameters.os >> \
-          GOARCH=<< parameters.arch >> \
-          CGO_ENABLED=0 \
-          go build -ldflags "-X main.Version=${CIRCLE_TAG}" \
-          -o $GOPATH/bin/lights-camera-action-<< parameters.os >>-<< parameters.arch >>
+      - run:
+          name: "Build << parameters.os >> << parameters.arch >> binary"
+          command: |
+            GOOS=<< parameters.os >> \
+            GOARCH=<< parameters.arch >> \
+            CGO_ENABLED=0 \
+            go build -ldflags "-X main.Version=${CIRCLE_TAG}" \
+            -o $GOPATH/bin/lights-camera-action-<< parameters.os >>-<< parameters.arch >>
 
 jobs:
   build:
@@ -28,6 +30,7 @@ jobs:
       - image: circleci/golang:1.13
     steps:
       - checkout
+      - run: go test ./...
       - go-build:
           os: linux
           arch: "386"
@@ -62,15 +65,18 @@ jobs:
             ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./artifacts/lights-camera-action-darwin-amd64
 
 workflows:
-  test:
+  build:
     jobs:
       - build:
           filters:
             tags:
               only: /.*/
-      - publish:
+      - test:
           requires:
             - build
+      - publish:
+          requires:
+            - test
           filters:
             tags:
               only: /^v.*/
