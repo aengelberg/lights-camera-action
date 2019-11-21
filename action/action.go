@@ -92,6 +92,8 @@ func Run(actionRef string, stepInputs StepInputs) error {
 	switch action.Runs.Using {
 	case "docker":
 		RunDockerAction(action, stepInputs, dir)
+	case "node12":
+		RunNodeAction(action, stepInputs, dir)
 	}
 	return nil
 }
